@@ -16,6 +16,7 @@ module.directive('kalendae', ['$parse', 'kal', 'KalendaeAPI', function($parse, k
     link: function(scope, element, attrs) {
       var model      = $parse(attrs.ngModel);
       var blackout   = scope.$eval(attrs.blackout);
+      var dateMap    = {};
 
       var type       = attrs.kalendae === 'dropdown' ? kal.Input : kal;
       var datePicker = new type(element[0], {
@@ -27,6 +28,28 @@ module.directive('kalendae', ['$parse', 'kal', 'KalendaeAPI', function($parse, k
         blackout   : blackout          || false
       });
 
+      var assignDate = function(date) {
+        if(angular.isArray(model(scope))) {
+          if(dateMap[date.valueOf()]) {
+            delete dateMap[date.valueOf()];
+          }
+          else {
+            dateMap[date.valueOf()] = date;
+          }
+          var newSet = [];
+          angular.forEach(dateMap, function reduceDates(date, key) {
+            newSet.push(date);
+          });
+
+          model.assign(scope, newSet);
+
+        }
+        else {
+          model.assign(scope, selectedDate);
+        }
+
+      };
+
       KalendaeAPI.setDatePicker(datePicker);
 
       // Requires animate.css in order to animate.
@@ -34,7 +57,7 @@ module.directive('kalendae', ['$parse', 'kal', 'KalendaeAPI', function($parse, k
 
       datePicker.subscribe('date-clicked', function(date) {
         var selectedDate = KalendaeAPI.setDate(date);
-        model.assign(scope, selectedDate);
+        assignDate(date);
         scope.$apply(function() {
           scope.$eval(attrs.callback);
         });
